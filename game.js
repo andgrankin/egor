@@ -10,6 +10,11 @@ class Creature {
         this.targetX = null;
         this.targetY = null;
         this.state = 'wandering'; // wandering, seeking_food, seeking_water
+        
+        // Load the character sprite
+        this.sprite = new Image();
+        this.sprite.src = 'character.png';
+        this.spriteSize = 30; // Adjust this based on your sprite size
     }
 
     update(apples, pond) {
@@ -95,55 +100,19 @@ class Creature {
         ctx.lineTo(this.x, this.y);
         ctx.fill();
 
-        // Draw body
-        ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw the character sprite
+        ctx.drawImage(
+            this.sprite,
+            this.x - this.spriteSize/2,
+            this.y - this.spriteSize/2,
+            this.spriteSize,
+            this.spriteSize
+        );
 
-        // Draw legs (only two)
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 2; i++) {
-            const angle = (i * Math.PI) + Math.sin(Date.now() / 200) * 0.2;
-            ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
-            ctx.lineTo(
-                this.x + Math.cos(angle) * 15,
-                this.y + Math.sin(angle) * 15
-            );
-            ctx.stroke();
-        }
-
-        // Draw eyes
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(this.x - 5, this.y - 2, 4, 0, Math.PI * 2);
-        ctx.arc(this.x + 5, this.y - 2, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.arc(this.x - 5, this.y - 2, 2, 0, Math.PI * 2);
-        ctx.arc(this.x + 5, this.y - 2, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw antennas
-        ctx.strokeStyle = '#8B4513';
-        if (this.antennaType === 'round') {
-            ctx.beginPath();
-            ctx.arc(this.x - 8, this.y - 12, 3, 0, Math.PI * 2);
-            ctx.arc(this.x + 8, this.y - 12, 3, 0, Math.PI * 2);
-            ctx.stroke();
-        } else {
-            ctx.beginPath();
-            ctx.rect(this.x - 10, this.y - 14, 4, 4);
-            ctx.rect(this.x + 6, this.y - 14, 4, 4);
-            ctx.stroke();
-        }
-
+        
         // Draw status bars
-        this.drawStatusBar(ctx, this.hunger, '#ff0000', -20);
-        this.drawStatusBar(ctx, this.thirst, '#0000ff', -15);
+        this.drawStatusBar(ctx, this.hunger, '#ff0000', -this.spriteSize/2 - 10);
+        this.drawStatusBar(ctx, this.thirst, '#0000ff', -this.spriteSize/2 - 5);
     }
 
     drawStatusBar(ctx, value, color, yOffset) {
