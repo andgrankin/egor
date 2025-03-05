@@ -79,6 +79,22 @@ class Creature {
     }
 
     draw(ctx) {
+        // Draw view range area as a sector
+        ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+        ctx.beginPath();
+        
+        // Calculate view direction based on movement
+        let viewAngle = 0;
+        if (this.targetX !== null && this.targetY !== null) {
+            viewAngle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+        }
+        
+        // Draw a sector (90-degree field of view)
+        ctx.moveTo(this.x, this.y);
+        ctx.arc(this.x, this.y, this.viewRange, viewAngle - Math.PI/4, viewAngle + Math.PI/4);
+        ctx.lineTo(this.x, this.y);
+        ctx.fill();
+
         // Draw body
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
@@ -131,10 +147,20 @@ class Creature {
     }
 
     drawStatusBar(ctx, value, color, yOffset) {
+        // Draw background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(this.x - 10, this.y + yOffset, 20, 3);
+        // Draw filled portion with semi-transparent background
         ctx.fillStyle = color;
-        ctx.fillRect(this.x - 10, this.y + yOffset, value / 5, 3);
+        const barWidth = value / 5;
+        ctx.fillRect(this.x - 10, this.y + yOffset, barWidth, 3);
+        // Add highlight when full
+        if (value >= 100) {
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.5;
+            ctx.fillRect(this.x - 10, this.y + yOffset, barWidth, 3);
+            ctx.globalAlpha = 1.0;
+        }
     }
 }
 
