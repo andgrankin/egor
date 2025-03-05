@@ -251,23 +251,30 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        // Set canvas dimensions based on window size
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
         this.creatures = [];
         this.trees = [];
-        this.pond = new Pond(600, 300, 40);
-
-        // Create creatures
+        
+        // Adjust pond position based on canvas size
+        this.pond = new Pond(this.canvas.width * 0.75, this.canvas.height * 0.5, this.getScaledSize(40));
+        
+        // Create creatures with scaled positions and attributes
         for (let i = 0; i < 5; i++) {
             this.creatures.push(new Creature(
-                Math.random() * 700 + 50,
-                Math.random() * 500 + 50,
+                Math.random() * (this.canvas.width - 100) + 50,
+                Math.random() * (this.canvas.height - 100) + 50,
                 Math.random() < 0.5 ? 'round' : 'square',
                 Math.random() * 2 + 1,
-                Math.random() * 100 + 100
+                Math.random() * this.getScaledSize(100) + this.getScaledSize(100)
             ));
         }
 
-        // Create multiple apple trees (5-7)
-        const numTrees = Math.floor(Math.random() * 3) + 5; // Random number between 5-7
+        // Create multiple apple trees with scaled positions
+        const numTrees = Math.floor(Math.random() * 3) + 5;
         for (let i = 0; i < numTrees; i++) {
             let x, y, validPosition;
             do {
@@ -275,9 +282,8 @@ class Game {
                 y = Math.random() * (this.canvas.height - 100) + 50;
                 validPosition = true;
                 
-                // Check distance from other trees
                 for (let tree of this.trees) {
-                    if (Math.hypot(x - tree.x, y - tree.y) < 100) {
+                    if (Math.hypot(x - tree.x, y - tree.y) < this.getScaledSize(100)) {
                         validPosition = false;
                         break;
                     }
@@ -287,9 +293,9 @@ class Game {
             this.trees.push(new AppleTree(x, y));
         }
 
-        // Create multiple ponds (2-3)
-        const numPonds = Math.floor(Math.random() * 2) + 2; // Random number between 2-3
-        this.ponds = [this.pond]; // Convert single pond to array, keeping the original pond
+        // Create multiple ponds
+        const numPonds = Math.floor(Math.random() * 2) + 2;
+        this.ponds = [this.pond];
         
         for (let i = 1; i < numPonds; i++) {
             let x, y, validPosition;
@@ -298,25 +304,47 @@ class Game {
                 y = Math.random() * (this.canvas.height - 100) + 50;
                 validPosition = true;
                 
-                // Check distance from trees and other ponds
                 for (let tree of this.trees) {
-                    if (Math.hypot(x - tree.x, y - tree.y) < 80) {
+                    if (Math.hypot(x - tree.x, y - tree.y) < this.getScaledSize(80)) {
                         validPosition = false;
                         break;
                     }
                 }
                 for (let pond of this.ponds) {
-                    if (Math.hypot(x - pond.x, y - pond.y) < 100) {
+                    if (Math.hypot(x - pond.x, y - pond.y) < this.getScaledSize(100)) {
                         validPosition = false;
                         break;
                     }
                 }
             } while (!validPosition);
             
-            this.ponds.push(new Pond(x, y, 40));
+            this.ponds.push(new Pond(x, y, this.getScaledSize(40)));
         }
 
         this.gameLoop();
+    }
+
+    resizeCanvas() {
+        // Get the device pixel ratio to handle high DPI displays
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Set canvas size to match window dimensions
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
+        
+        // Scale the context to handle high DPI displays
+        this.ctx.scale(dpr, dpr);
+        
+        // Update game elements if they exist
+        if (this.pond) {
+            this.pond.radius = this.getScaledSize(40);
+        }
+    }
+
+    getScaledSize(baseSize) {
+        // Scale sizes based on screen dimensions
+        const scaleFactor = Math.min(window.innerWidth, window.innerHeight) / 800;
+        return baseSize * scaleFactor;
     }
 
     update() {
