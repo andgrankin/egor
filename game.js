@@ -22,6 +22,11 @@ class Creature {
         this.hunger = Math.min(100, this.hunger + 0.1);
         this.thirst = Math.min(100, this.thirst + 0.1);
 
+        // Check for death condition
+        if (this.hunger >= 100 || this.thirst >= 100) {
+            return false; // Creature dies
+        }
+
         // Decide what to do based on needs
         if (this.hunger >= 70 && this.hunger > this.thirst) {
             this.state = 'seeking_food';
@@ -36,6 +41,7 @@ class Creature {
         }
 
         this.move();
+        return true; // Creature survives
     }
 
     findNearestApple(apples) {
@@ -85,7 +91,7 @@ class Creature {
 
     draw(ctx) {
         // Draw view range area as a sector
-        ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+        ctx.fillStyle = 'rgba(173,216,230, 0.3)';
         ctx.beginPath();
         
         // Calculate view direction based on movement
@@ -139,6 +145,17 @@ class AppleTree {
         this.y = y;
         this.apples = [];
         this.maxApples = 3;
+        
+        // Load tree sprite
+        this.treeSprite = new Image();
+        this.treeSprite.src = 'tree.png';
+        this.treeSpriteSize = 60;
+        
+        // Load apple sprite
+        this.appleSprite = new Image();
+        this.appleSprite.src = 'apple.png';
+        this.appleSpriteSize = 10;
+        
         this.initApples();
     }
 
@@ -149,11 +166,13 @@ class AppleTree {
     }
 
     addApple() {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * 20 + 10;
+        // Position apples in the upper portion of the tree crown
+        const angle = Math.random() * Math.PI * 0.8 - Math.PI * 0.4; // Angle range from -40° to +40°
+        const distance = Math.random() * 15 + 5; // Shorter distance range
+        const verticalOffset = -this.treeSpriteSize * 0.7; // Place apples in upper portion
         this.apples.push({
             x: this.x + Math.cos(angle) * distance,
-            y: this.y + Math.sin(angle) * distance
+            y: this.y + verticalOffset + Math.sin(angle) * distance
         });
     }
 
@@ -176,22 +195,24 @@ class AppleTree {
     }
 
     draw(ctx) {
-        // Draw tree trunk
-        ctx.fillStyle = '#4B2810';
-        ctx.fillRect(this.x - 5, this.y - 10, 10, 40);
+        // Draw tree sprite
+        ctx.drawImage(
+            this.treeSprite,
+            this.x - this.treeSpriteSize/2,
+            this.y - this.treeSpriteSize,
+            this.treeSpriteSize,
+            this.treeSpriteSize
+        );
 
-        // Draw tree crown
-        ctx.fillStyle = '#228B22';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - 20, 30, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw apples
-        ctx.fillStyle = '#FF0000';
+        // Draw apples using sprite
         this.apples.forEach(apple => {
-            ctx.beginPath();
-            ctx.arc(apple.x, apple.y, 5, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.drawImage(
+                this.appleSprite,
+                apple.x - this.appleSpriteSize/2,
+                apple.y - this.appleSpriteSize/2,
+                this.appleSpriteSize,
+                this.appleSpriteSize
+            );
         });
     }
 }
@@ -245,15 +266,77 @@ class Game {
             ));
         }
 
-        // Create apple trees
-        this.trees.push(new AppleTree(200, 200));
-        this.trees.push(new AppleTree(400, 400));
+        // Create multiple apple trees (5-7)
+        const numTrees = Math.floor(Math.random() * 3) + 5; // Random number between 5-7
+        for (let i = 0; i < numTrees; i++) {
+            let x, y, validPosition;
+            do {
+                x = Math.random() * (this.canvas.width - 100) + 50;
+                y = Math.random() * (this.canvas.height - 100) + 50;
+                validPosition = true;
+                
+                // Check distance from other trees
+                for (let tree of this.trees) {
+                    if (Math.hypot(x - tree.x, y - tree.y) < 100) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            } while (!validPosition);
+            
+            this.trees.push(new AppleTree(x, y));
+        }
+
+        // Create multiple ponds (2-3)
+        const numPonds = Math.floor(Math.random() * 2) + 2; // Random number between 2-3
+        this.ponds = [this.pond]; // Convert single pond to array, keeping the original pond
+        
+        for (let i = 1; i < numPonds; i++) {
+            let x, y, validPosition;
+            do {
+                x = Math.random() * (this.canvas.width - 100) + 50;
+                y = Math.random() * (this.canvas.height - 100) + 50;
+                validPosition = true;
+                
+                // Check distance from trees and other ponds
+                for (let tree of this.trees) {
+                    if (Math.hypot(x - tree.x, y - tree.y) < 80) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+                for (let pond of this.ponds) {
+                    if (Math.hypot(x - pond.x, y - pond.y) < 100) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            } while (!validPosition);
+            
+            this.ponds.push(new Pond(x, y, 40));
+        }
 
         this.gameLoop();
     }
 
     update() {
-        this.creatures.forEach(creature => creature.update(this.trees, this.pond));
+        // Remove dead creatures
+        this.creatures = this.creatures.filter(creature => creature.update(this.trees, this.pond));
+
+        // Handle reproduction
+        if (this.creatures.length < 10 && Math.random() < 0.002) {
+            const parent = this.creatures[Math.floor(Math.random() * this.creatures.length)];
+            if (parent && parent.hunger < 50 && parent.thirst < 50) {
+                this.creatures.push(new Creature(
+                    parent.x + (Math.random() * 40 - 20),
+                    parent.y + (Math.random() * 40 - 20),
+                    parent.antennaType,
+                    Math.max(1, parent.speed + (Math.random() * 0.4 - 0.2)),
+                    Math.max(50, parent.viewRange + (Math.random() * 20 - 10))
+                ));
+            }
+        }
+
         this.trees.forEach(tree => tree.update(this.creatures));
         this.pond.update(this.creatures);
     }
